@@ -21,10 +21,6 @@
     {
       "matches": ["https://colonist.io/*"],
       "js": ["scripts/content.js"]
-    },
-    {
-        "matches": ["https://colonist.io/*"],
-        "js": ["scripts/createBox.js"]
     }
   ]
 }

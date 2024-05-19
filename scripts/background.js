@@ -7,14 +7,11 @@ chrome.action.onClicked.addListener((tab) => {
       files: ['scripts/content.js'] // Correct path to content.js
     }).then(() => {
       console.log('Content script injected');
-      chrome.tabs.sendMessage(tab.id, { action: 'extractChat' }, (response) => {
+      chrome.tabs.sendMessage(tab.id, { action: 'updateBox' }, (response) => {
         if (chrome.runtime.lastError) {
           console.error('Error sending message to content script:', chrome.runtime.lastError);
-        } else if (response && response.messages) {
-          console.log('Messages received from content script:', response.messages); // Log received messages
-          summarizeChat(tab, response.messages);
         } else {
-          console.error('No messages received from content script');
+          console.log('Popup deployed')
         }
       });
     }).catch(err => {
