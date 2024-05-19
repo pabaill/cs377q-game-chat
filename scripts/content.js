@@ -1,25 +1,27 @@
 // content.js
 
+/*
+* Extract chat messages in list format
+*/
 function extractChatMessages() {
-  const chatElements = document.querySelectorAll('#game-chat-text .message-post span'); // Update the selector based on the chat structure
+  const chatElements = document.querySelectorAll('#game-chat-text .message-post span');
   const messages = [];
   
   chatElements.forEach(element => {
       const textNodes = Array.from(element.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
       textNodes.forEach(node => {
+        // If it's a chat message it'll begin with ": BLAH BLAH BLAH", cut out colon to get message "BLAH BLAH BLAH"
         if (node.textContent.includes(':')) {
           messages.push(node.textContent.trim().substring(2));
         }
       });
   });
 
-  console.log('Extracted messages:', messages);
-
   return messages;
 }
 
 // Function to create and append the draggable box
-function createDraggableBox(messages, tabId) {
+function createDraggableBox() {
   // Create container div
   const container = document.createElement('div');
   container.id = 'dragBoxContainer';
@@ -49,7 +51,7 @@ function createDraggableBox(messages, tabId) {
   titleBar.style.borderRadius = '5px 5px 0 0';
   titleBar.style.display = 'flex';
   titleBar.style.justifyContent = 'space-between';
-  titleBar.innerHTML = '<span>Chat Summarizer</span><span class="close-btn" id="closeBtn">&times;</span>';
+  titleBar.innerHTML = '<span>Quick Chat</span><span class="close-btn" id="closeBtn">&times;</span>';
 
   // Create content div
   const content = document.createElement('div');
@@ -89,15 +91,17 @@ function createDraggableBox(messages, tabId) {
   });
   closeBtn.style.cursor = 'pointer';
 
+  // OUR MAIN FEATURE: a button that reads the chat then can process it
   const loadMoreBtn = document.createElement('button');
   loadMoreBtn.textContent = 'What\'s Going On?';
   loadMoreBtn.classList.add('load-more-btn');
 
-  // Add event listener to the load more button
+  // TODO: use this event to call OpenAI APIs and process chat text
   loadMoreBtn.addEventListener('click', (e) => {
       // Here you can implement the logic to load more chat messages
       e.preventDefault();
       content.innerHTML = extractChatMessages().join('<br>');
+      content.appendChild(loadMoreBtn);
   });
   // Append the load more button to the modal content
   content.appendChild(loadMoreBtn);
@@ -111,12 +115,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'updateBox') {
       // Check if the draggable box already exists
       const box = document.getElementById('dragBoxContainer');
-      if (box) {
-          const content = box.querySelector('.content');
-          content.innerHTML = data.messages.join('<br>');
-      } else {
-          // If the box doesn't exist, create it
-          createDraggableBox();
+      if (!box) {
+        createDraggableBox();
       }
   }
 });
