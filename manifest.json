@@ -5,14 +5,13 @@
   "description": "Reads an online chat from a page and summarizes it.",
   "permissions": [
     "activeTab",
-    "scripting",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://colonist.io/*"
   ],
   "action": {
-    "default_popup": "menu.html",
     "default_icon": "chat-icon.png"
   },
   "background": {
@@ -20,8 +19,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["https://colonist.io/*"],
       "js": ["scripts/content.js"]
+    },
+    {
+        "matches": ["https://colonist.io/*"],
+        "js": ["scripts/createBox.js"]
     }
   ]
 }
