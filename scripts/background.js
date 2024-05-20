@@ -16,3 +16,18 @@ chrome.action.onClicked.addListener((tab) => {
       console.error('Error injecting content script:', err);
     });
   });
+
+fetch(chrome.runtime.getURL('.env'))
+  .then(response => response.text())
+  .then(text => {
+    const env = {};
+    text.split('\n').forEach(line => {
+      const [key, value] = line.split('=');
+      if (key && value) {
+        env[key.trim()] = value.trim();
+      }
+    });
+    console.log('Loaded env variables:', env);  // Debug log
+    chrome.storage.local.set({ env });
+  })
+  .catch(error => console.error('Error loading .env file:', error));
