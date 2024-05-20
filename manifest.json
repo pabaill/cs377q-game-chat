@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "https://api.openai.com/"
   ],
   "host_permissions": [
     "https://colonist.io/*"
