@@ -1,4 +1,15 @@
 // content.js
+let apiKey;
+
+chrome.storage.local.get('env', function(result) {
+  const env = result.env;
+  if (env && env.OPENAI_API_KEY) {
+    apiKey = env.OPENAI_API_KEY;
+    console.log('API Key loaded');
+  } else {
+    console.error('Environment variables not found.');
+  }
+});
 /*
 * Extract chat messages in list format
 */
@@ -105,6 +116,8 @@ function createDraggableBox() {
       e.preventDefault();
       content.innerHTML = extractChatMessages().join('<br>');
       content.appendChild(loadMoreBtn);
+      
+      makeOpenAIRequest();
       /* Likely, here's where our ChatGPT implementation will go! */
       // const openai = require('openai');
       // openai.chat.completions.create({
@@ -120,6 +133,29 @@ function createDraggableBox() {
 
   // Append container to body
   document.body.appendChild(container);
+}
+
+function makeOpenAIRequest() {
+  const url = 'https://api.openai.com/v1/engines/gpt-3.5-turbo/completions';
+  const data = {
+    prompt: "Say this is a test",
+    max_tokens: 5,
+    model: "gpt-3.5-turbo"
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(data)
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log('OpenAI Response:', data);
+    })
+    .catch(error => console.error('Error making OpenAI request:', error));
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
