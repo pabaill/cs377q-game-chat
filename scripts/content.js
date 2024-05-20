@@ -1,5 +1,4 @@
 // content.js
-
 /*
 * Extract chat messages in list format
 */
@@ -95,13 +94,26 @@ function createDraggableBox() {
   const loadMoreBtn = document.createElement('button');
   loadMoreBtn.textContent = 'What\'s Going On?';
   loadMoreBtn.classList.add('load-more-btn');
+  loadMoreBtn.style.position = 'absolute';
+  loadMoreBtn.style.bottom = 0;
+  loadMoreBtn.style.left = 0;
+  loadMoreBtn.style.width = '100%';
+
 
   // TODO: use this event to call OpenAI APIs and process chat text
   loadMoreBtn.addEventListener('click', (e) => {
-      // Here you can implement the logic to load more chat messages
       e.preventDefault();
       content.innerHTML = extractChatMessages().join('<br>');
       content.appendChild(loadMoreBtn);
+      /* Likely, here's where our ChatGPT implementation will go! */
+      // const openai = require('openai');
+      // openai.chat.completions.create({
+      //   messages: [{ role: "system", content: "You are a helpful assistant." }],
+      //   model: "gpt-3.5-turbo",
+      // }).then((completion) => {
+      //   content.innerHTML = completion.choices[0].message.content;
+      //   content.appendChild(loadMoreBtn);
+      // });
   });
   // Append the load more button to the modal content
   content.appendChild(loadMoreBtn);
