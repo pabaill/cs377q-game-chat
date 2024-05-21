@@ -209,15 +209,25 @@ function createDraggableBox() {
 }
 
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
+  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
+        Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
+        Your summary should be three sentences maximum. 
+        The username is the part before the colon, and each message is separated by a newline character. 
+
+        EXAMPLES:
+        Input: "USER123: I want wheat\n USER123: I want wood\n USER123: Please give me some rock"
+        Output: "USER123 wanted wheat, wood, and rock."
+        
+        Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
+        Output: "USER123 wanted wheat and offered a 1 for 1 trade to USER124, who wanted wood."
+
+        Messages: `;
   const url = 'https://api.openai.com/v1/chat/completions';
-  var messageSummary = '';
-  messages.forEach(m => {
-    messageSummary += m + '\n';
-  });
+  var messageSummary = messages.join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
-      {"role": "system", "content": "Summarize the user's inputted game chat to help them understand what has happened since they left their computer. One sentence maximum."}, 
+      {"role": "system", "content": whatsGoingOnPrompt}, 
       {"role": "user", "content": messageSummary}
     ],
     temperature: 1
@@ -244,14 +254,17 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 
 async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
   const url = 'https://api.openai.com/v1/chat/completions';
-  var messageSummary = '';
-  gamelog.forEach(m => {
-    messageSummary += m + '\n';
-  });
+  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
+        Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
+        Your summary should be three sentences maximum. 
+        The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
+
+        Messages: `;
+  var messageSummary = gamelog.join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
-      {"role": "system", "content": "Summarize the user's log of an ongoing game of Catan to help them understand what other players might be planning. One sentence for each player."}, 
+      {"role": "system", "content": whatsGoingOnPrompt}, 
       {"role": "user", "content": messageSummary}
     ],
     temperature: 1
