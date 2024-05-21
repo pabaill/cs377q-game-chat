@@ -6,11 +6,11 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting",
-    "https://api.openai.com/"
+    "scripting"
   ],
   "host_permissions": [
-    "https://colonist.io/*"
+    "https://colonist.io/*",
+    "https://api.openai.com/*"
   ],
   "action": {
     "default_icon": "chat-icon.png"
