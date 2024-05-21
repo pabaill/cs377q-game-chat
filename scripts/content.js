@@ -1,5 +1,5 @@
 // content.js
-let openaiAPIKey;
+var openaiAPIKey;
 
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
@@ -10,6 +10,47 @@ chrome.storage.local.get('env', function(result) {
     console.error('Environment variables not found.');
   }
 });
+
+/* Helper function to replace image elements with their alt text */
+function replaceImgWithAltText(div) {
+  // Find all image elements within the div
+  var imgs = div.querySelectorAll('img');
+  var firstTextNode = div.firstChild;
+  while (firstTextNode && firstTextNode.nodeType !== Node.TEXT_NODE) {
+    firstTextNode = firstTextNode.nextSibling;
+  }
+
+  // Loop through all the image elements
+  imgs.forEach(function(img) {
+    // Get the alt text of the image
+    var altText = img.alt;
+
+    if (firstTextNode) {
+      firstTextNode.textContent += altText;
+    } else {
+      // If no existing text node found, create one
+      firstTextNode = document.createTextNode(altText);
+      div.appendChild(firstTextNode);
+    }
+
+    // Replace the image element with the text node
+    img.remove();
+
+    // Find next text node
+    if (firstTextNode) {
+      var nextTextNode = firstTextNode.nextSibling;
+      while (nextTextNode && nextTextNode.nodeType !== Node.TEXT_NODE) {
+        nextTextNode = nextTextNode.nextSibling;
+      }
+      if (nextTextNode) {
+        firstTextNode.textContent += nextTextNode.textContent;
+        nextTextNode.remove();
+      }
+    }
+  });
+}
+
+
 /*
 * Extract chat messages in list format
 */
@@ -18,10 +59,10 @@ function extractChatMessages() {
   const messages = [];
   let prevMessage = '';
   
-  chatElements.forEach(element => {
+  chatElements.forEach((element) => {
+      replaceImgWithAltText(element);
       const textNodes = Array.from(element.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
       textNodes.forEach(node => {
-        // If it's a chat message it'll begin with ": BLAH BLAH BLAH", and the next node will be the username; combine these and add them to messages
         if (node.textContent.includes(':')) {
           prevMessage = node.textContent.trim();
         } else {
@@ -30,6 +71,30 @@ function extractChatMessages() {
       });
   });
 
+  return messages;
+}
+
+function extractGameLog() {
+  // Leave out intro stuff
+  const gameElements = [...document.querySelectorAll('#game-log-text .message-post span')].slice(3);
+  const messages = [];
+  let prevMessage = '';
+  var i = 0;
+  
+  gameElements.forEach((element) => {
+      replaceImgWithAltText(element);
+      const textNodes = Array.from(element.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
+      textNodes.forEach((node) => {
+        // If it's a game log message it'll first be the username and then their action
+        if (i % 2 === 0) {
+          prevMessage = node.textContent.trim();
+        } else {
+          messages.push(prevMessage + ' ' + node.textContent.trim());
+        }
+        i += 1;
+      });
+  });
+  console.log(messages)
   return messages;
 }
 
@@ -70,7 +135,9 @@ function createDraggableBox() {
   const content = document.createElement('div');
   content.classList.add('content');
   content.style.padding = '10px';
-  content.innerHTML = extractChatMessages().join('<br>');
+  // content.innerHTML = extractGameLog().join('<br>');
+  // content.innerHTML = extractChatMessages().join('<br>');
+  // console.log(extractChatMessages())
 
   // Append title bar and content to container
   container.appendChild(titleBar);
@@ -105,22 +172,46 @@ function createDraggableBox() {
   closeBtn.style.cursor = 'pointer';
 
   // OUR MAIN FEATURE: a button that reads the chat then can process it
-  const loadMoreBtn = document.createElement('button');
-  loadMoreBtn.textContent = 'What\'s Going On?';
-  loadMoreBtn.classList.add('load-more-btn');
-  loadMoreBtn.style.position = 'absolute';
-  loadMoreBtn.style.bottom = 0;
-  loadMoreBtn.style.left = 0;
-  loadMoreBtn.style.width = '100%';
+  const chatButton = document.createElement('button');
+  chatButton.textContent = 'Catch Me Up: Chat';
+  chatButton.classList.add('chat-btn');
+  chatButton.style.position = 'absolute';
+  chatButton.style.height = '30px';
+  chatButton.style.bottom = '30px';
+  chatButton.style.left = 0;
+  chatButton.style.width = '100%';
+
+  const gameButton = document.createElement('button');
+  gameButton.textContent = 'Catch Me Up: Game';
+  gameButton.classList.add('game-btn');
+  gameButton.style.position = 'absolute';
+  gameButton.style.height = '30px';
+  gameButton.style.bottom = 0;
+  gameButton.style.left = 0;
+  gameButton.style.width = '100%';
 
 
-  loadMoreBtn.addEventListener('click', (e) => {
+  chatButton.addEventListener('click', (e) => {
       e.preventDefault();
-      // content.innerHTML = extractChatMessages().join('<br>');
-      // content.appendChild(loadMoreBtn);
-      const messages = extractChatMessages();
-      const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
+      gptUpdateChatWindow(extractChatMessages(), content, chatButton, gameButton);
+  });
+
+  gameButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    gptUpdateGameWindow(extractGameLog(), content, chatButton, gameButton);
+  });
+  // Append the load more button to the modal content
+  content.appendChild(chatButton);
+  content.appendChild(gameButton);
+
+  // Append container to body
+  document.body.appendChild(container);
+}
+
+async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
+  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
+        Your summary should be three sentences maximum. 
         The username is the part before the colon, and each message is separated by a newline character. 
 
         EXAMPLES:
@@ -130,49 +221,14 @@ function createDraggableBox() {
         Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
         Output: "USER123 wanted wheat and offered a 1 for 1 trade to USER124, who wanted wood."
 
-        Messages: ` + messages.join('\n');
-      gptUpdateChatWindow(content, loadMoreBtn, whatsGoingOnPrompt);
-      /* Likely, here's where our ChatGPT implementation will go! */
-      // const openai = require('openai');
-      // openai.chat.completions.create({
-      //   messages: [{ role: "system", content: "You are a helpful assistant." }],
-      //   model: "gpt-3.5-turbo",
-      // }).then((completion) => {
-      //   content.innerHTML = completion.choices[0].message.content;
-      //   content.appendChild(loadMoreBtn);
-      // });
-  });
-  // Append the load more button to the modal content
-  content.appendChild(loadMoreBtn);
-
-  // TODO: use/test this prompt in added button for gameplay updates
-  // const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game update messages. 
-  //   Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
-  //   The username is first word of each line, and each message is separated by a newline character. 
-
-  //   EXAMPLES:
-  //   Input: "USER123 placed a settlement\n USER123 placed a road\n USER123 placed a settlement"
-  //   Output: "USER123 placed two settlements and a road."
-    
-  //   Input: "USER123 placed a settlement\n USER123 placed a road\n USER124 placed a settlement"
-  //   Output: "USER123 placed a settlement and a road;\n USER124 placed a settlement."
-
-  //   Messages: ` + messages.join('\n');
-
-  // Append container to body
-  document.body.appendChild(container);
-}
-
-async function gptUpdateChatWindow(content, loadMoreBtn, prompt) {
-  content.innerHTML = "loading...";
+        Messages: `;
   const url = 'https://api.openai.com/v1/chat/completions';
+  var messageSummary = messages.join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
-      {
-        "role": "system", 
-        "content": prompt
-      },
+      {"role": "system", "content": whatsGoingOnPrompt}, 
+      {"role": "user", "content": messageSummary}
     ],
     temperature: 1
   }
@@ -190,7 +246,45 @@ async function gptUpdateChatWindow(content, loadMoreBtn, prompt) {
       console.log('OpenAI Response:', data);
       const res = data.choices[0].message.content;
       content.innerHTML = res;
-      content.appendChild(loadMoreBtn);
+      content.appendChild(chatButton);
+      content.appendChild(gameButton)
+    })
+    .catch(error => console.error('Error making OpenAI request:', error));
+}
+
+async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
+        Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
+        Your summary should be three sentences maximum. 
+        The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
+
+        Messages: `;
+  var messageSummary = gamelog.join('\n');
+  const data = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      {"role": "system", "content": whatsGoingOnPrompt}, 
+      {"role": "user", "content": messageSummary}
+    ],
+    temperature: 1
+  }
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openaiAPIKey}`,
+    },
+    body: JSON.stringify(data)
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log('OpenAI Response:', data);
+      const res = data.choices[0].message.content;
+      content.innerHTML = res;
+      content.appendChild(chatButton);
+      content.appendChild(gameButton);
     })
     .catch(error => console.error('Error making OpenAI request:', error));
 }
