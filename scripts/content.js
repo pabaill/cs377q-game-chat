@@ -1,4 +1,15 @@
 // content.js
+let openaiAPIKey;
+
+chrome.storage.local.get('env', function(result) {
+  const env = result.env;
+  if (env && env.OPENAI_API_KEY) {
+    openaiAPIKey = env.OPENAI_API_KEY;
+    console.log('API Key loaded');
+  } else {
+    console.error('Environment variables not found.');
+  }
+});
 /*
 * Extract chat messages in list format
 */
@@ -103,8 +114,10 @@ function createDraggableBox() {
   // TODO: use this event to call OpenAI APIs and process chat text
   loadMoreBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      content.innerHTML = extractChatMessages().join('<br>');
-      content.appendChild(loadMoreBtn);
+      // content.innerHTML = extractChatMessages().join('<br>');
+      // content.appendChild(loadMoreBtn);
+      
+      gptUpdateChatWindow(extractChatMessages(), content, loadMoreBtn);
       /* Likely, here's where our ChatGPT implementation will go! */
       // const openai = require('openai');
       // openai.chat.completions.create({
@@ -120,6 +133,36 @@ function createDraggableBox() {
 
   // Append container to body
   document.body.appendChild(container);
+}
+
+// TODO: use messages to get a response related to the chat
+async function gptUpdateChatWindow(messages, content, loadMoreBtn) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const data = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      {"role": "system", "content": "You a wizard aiding me on my quest to save the prince. Your time is short, so only answer with one sentence to each question."}, 
+      {"role": "user", "content": "What advice do you have for me on my quest?"}
+    ],
+    temperature: 1
+  }
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openaiAPIKey}`,
+    },
+    body: JSON.stringify(data)
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log('OpenAI Response:', data);
+      const res = data.choices[0].message.content;
+      content.innerHTML = res;
+      content.appendChild(loadMoreBtn);
+    })
+    .catch(error => console.error('Error making OpenAI request:', error));
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
