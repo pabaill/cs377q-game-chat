@@ -16,13 +16,16 @@ chrome.storage.local.get('env', function(result) {
 function extractChatMessages() {
   const chatElements = document.querySelectorAll('#game-chat-text .message-post span');
   const messages = [];
+  let prevMessage = '';
   
   chatElements.forEach(element => {
       const textNodes = Array.from(element.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
       textNodes.forEach(node => {
-        // If it's a chat message it'll begin with ": BLAH BLAH BLAH", cut out colon to get message "BLAH BLAH BLAH"
+        // If it's a chat message it'll begin with ": BLAH BLAH BLAH", and the next node will be the username; combine these and add them to messages
         if (node.textContent.includes(':')) {
-          messages.push(node.textContent.trim().substring(2));
+          prevMessage = node.textContent.trim();
+        } else {
+          messages.push(node.textContent.trim() + prevMessage);
         }
       });
   });
@@ -111,13 +114,24 @@ function createDraggableBox() {
   loadMoreBtn.style.width = '100%';
 
 
-  // TODO: use this event to call OpenAI APIs and process chat text
   loadMoreBtn.addEventListener('click', (e) => {
       e.preventDefault();
       // content.innerHTML = extractChatMessages().join('<br>');
       // content.appendChild(loadMoreBtn);
-      
-      gptUpdateChatWindow(extractChatMessages(), content, loadMoreBtn);
+      const messages = extractChatMessages();
+      const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
+        Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
+        The username is the part before the colon, and each message is separated by a newline character. 
+
+        EXAMPLES:
+        Input: "USER123: I want wheat\n USER123: I want wood\n USER123: Please give me some rock"
+        Output: "USER123 wanted wheat, wood, and rock."
+        
+        Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
+        Output: "USER123 wanted wheat and offered a 1 for 1 trade to USER124, who wanted wood."
+
+        Messages: ` + messages.join('\n');
+      gptUpdateChatWindow(content, loadMoreBtn, whatsGoingOnPrompt);
       /* Likely, here's where our ChatGPT implementation will go! */
       // const openai = require('openai');
       // openai.chat.completions.create({
@@ -131,18 +145,34 @@ function createDraggableBox() {
   // Append the load more button to the modal content
   content.appendChild(loadMoreBtn);
 
+  // TODO: use/test this prompt in added button for gameplay updates
+  // const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game update messages. 
+  //   Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
+  //   The username is first word of each line, and each message is separated by a newline character. 
+
+  //   EXAMPLES:
+  //   Input: "USER123 placed a settlement\n USER123 placed a road\n USER123 placed a settlement"
+  //   Output: "USER123 placed two settlements and a road."
+    
+  //   Input: "USER123 placed a settlement\n USER123 placed a road\n USER124 placed a settlement"
+  //   Output: "USER123 placed a settlement and a road;\n USER124 placed a settlement."
+
+  //   Messages: ` + messages.join('\n');
+
   // Append container to body
   document.body.appendChild(container);
 }
 
-// TODO: use messages to get a response related to the chat
-async function gptUpdateChatWindow(messages, content, loadMoreBtn) {
+async function gptUpdateChatWindow(content, loadMoreBtn, prompt) {
+  content.innerHTML = "loading...";
   const url = 'https://api.openai.com/v1/chat/completions';
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
-      {"role": "system", "content": "You a wizard aiding me on my quest to save the prince. Your time is short, so only answer with one sentence to each question."}, 
-      {"role": "user", "content": "What advice do you have for me on my quest?"}
+      {
+        "role": "system", 
+        "content": prompt
+      },
     ],
     temperature: 1
   }
