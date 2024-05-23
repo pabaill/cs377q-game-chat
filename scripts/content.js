@@ -1,13 +1,6 @@
 // content.js
 var openaiAPIKey;
 
-// length of messages array last time it was initialized
-var numMessagesSeen;
-// length of gamelog array last time it was initialized
-var numGameActionsSeen;
-
-var playerList;
-
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
@@ -95,11 +88,6 @@ function extractGameLog() {
         // If it's a game log message it'll first be the username and then their action
         if (i % 2 === 0) {
           prevMessage = node.textContent.trim();
-          if (!playerList) {
-            playerList = [prevMessage]
-          } else if (!playerList.includes(prevMessage)) {
-            playerList.push(prevMessage);
-          }
         } else {
           messages.push(prevMessage + ' ' + node.textContent.trim());
         }
@@ -224,19 +212,22 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
         Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
+        Your summary should be three sentences maximum. Output your summary in unordered HTML list form, using <ul> and <li>.
         The username is the part before the colon, and each message is separated by a newline character. 
 
         EXAMPLES:
         Input: "USER123: I want wheat\n USER123: I want wood\n USER123: Please give me some rock"
-        Output: "USER123 wanted wheat, wood, and rock."
+        Output: "<ul> <li>USER123 wanted wheat, wood, and rock</li> </ul>"
         
         Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
-        Output: "USER123 wanted wheat and offered a 1 for 1 trade to USER124, who wanted wood."
+        Output: "<ul>
+          <li>USER123 wanted wheat and offered a 1 for 1 trade to USER124 for wood</li>
+          <li>USER124 wanted wood</li>
+        </ul>"
 
         Messages: `;
   const url = 'https://api.openai.com/v1/chat/completions';
-  // Summarize last five or so messages
-  var messageSummary = messages.slice(numMessagesSeen ? numMessagesSeen : 0).join('\n');
+  var messageSummary = messages.join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
@@ -260,9 +251,7 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
       const res = data.choices[0].message.content;
       content.innerHTML = res;
       content.appendChild(chatButton);
-      content.appendChild(gameButton);
-      // update number of messages seen to track when chat was queried last
-      numMessagesSeen = messages.length;
+      content.appendChild(gameButton)
     })
     .catch(error => console.error('Error making OpenAI request:', error));
 }
@@ -272,11 +261,20 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
   const url = 'https://api.openai.com/v1/chat/completions';
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
-        Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
+        Your summary should be three sentences maximum. Output your summary in unordered HTML list form, using <ul> and <li>, where each bullet corresponds to a username.
         The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
 
+        EXAMPLES:
+        Input: "USER123 placed a settlement\n USER123 got lumber\n USER123 wants to give lumber for sheep"
+        Output: "<ul> <li><b>USER123</b> placed a settlement</li><li><b>USER123</b> is asking for a trade if you have lumber</li> </ul> <p></p>"
+        
+        Input: "USER123 moved Robber robber to prob_9 grain_tile"
+        Output: "<ul>
+          <li><b>USER123</b> is trying to steal grain from the tile with the 9 on it</li>
+        </ul>"
+
         Messages: `;
-  var messageSummary = gamelog.slice(numGameActionsSeen ? numGameActionsSeen : 0).join('\n');
+  var messageSummary = gamelog.join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
@@ -301,7 +299,6 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
       content.innerHTML = res;
       content.appendChild(chatButton);
       content.appendChild(gameButton);
-      numGameActionsSeen = gamelog.length;
     })
     .catch(error => console.error('Error making OpenAI request:', error));
 }
