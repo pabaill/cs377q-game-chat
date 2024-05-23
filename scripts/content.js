@@ -126,7 +126,7 @@ function createDraggableBox() {
   container.style.position = 'fixed';
   container.style.top = '50px';
   container.style.left = '50px';
-  container.style.width = '300px';
+  container.style.width = '400px';
   container.style.height = '200px';
   container.style.backgroundColor = '#ffffff';
   container.style.border = '1px solid #cccccc';
@@ -193,30 +193,39 @@ function createDraggableBox() {
   chatButton.classList.add('chat-btn');
   chatButton.style.position = 'absolute';
   chatButton.style.height = '30px';
-  chatButton.style.bottom = '30px';
+  chatButton.style.top = '35px';
   chatButton.style.left = 0;
-  chatButton.style.width = '100%';
+  chatButton.style.width = '50%';
 
   const gameButton = document.createElement('button');
   gameButton.textContent = 'Catch Me Up: Game';
   gameButton.classList.add('game-btn');
   gameButton.style.position = 'absolute';
   gameButton.style.height = '30px';
-  gameButton.style.bottom = 0;
-  gameButton.style.left = 0;
-  gameButton.style.width = '100%';
+  gameButton.style.top = '35px';
+  gameButton.style.left = '50%';
+  gameButton.style.width = '50%';
 
 
   chatButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      gptUpdateChatWindow(extractChatMessages(), content, chatButton, gameButton);
+    e.preventDefault();
+    chatButton.style.backgroundColor = 'black';
+    chatButton.style.color = 'white';
+    gameButton.style.backgroundColor = 'rgb(255, 255, 255)';
+    gameButton.style.color = 'black';
+    gptUpdateChatWindow(extractChatMessages(), content, chatButton, gameButton);
   });
 
   gameButton.addEventListener('click', (e) => {
     e.preventDefault();
+    gameButton.style.backgroundColor = 'black';
+    gameButton.style.color = 'white';
+    chatButton.style.backgroundColor = 'rgb(255, 255, 255)';
+    chatButton.style.color = 'black';
     gptUpdateGameWindow(extractGameLog(), content, chatButton, gameButton);
   });
   // Append the load more button to the modal content
+  content.style.paddingTop = '35px';
   content.appendChild(chatButton);
   content.appendChild(gameButton);
 
@@ -225,6 +234,7 @@ function createDraggableBox() {
 }
 
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
+  content.innerHTML = "loading...";
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
         Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
@@ -234,8 +244,13 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
         EXAMPLES:
         Input: "USER123: I want wheat\n USER123: I want wood\n USER123: Please give me some rock"
         Output: "<ul> <li>USER123 wanted wheat, wood, and rock</li> </ul>"
+        Output: "<ul> <li>USER123 wanted wheat, wood, and rock</li> </ul>"
         
         Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
+        Output: "<ul>
+          <li>USER123 wanted wheat and offered a 1 for 1 trade to USER124 for wood</li>
+          <li>USER124 wanted wood</li>
+        </ul>"
         Output: "<ul>
           <li>USER123 wanted wheat and offered a 1 for 1 trade to USER124 for wood</li>
           <li>USER124 wanted wood</li>
@@ -274,7 +289,7 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 }
 
 async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
-  console.log(playerList)
+  content.innerHTML = "loading...";
   const url = 'https://api.openai.com/v1/chat/completions';
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
