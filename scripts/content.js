@@ -1,6 +1,11 @@
 // content.js
 var openaiAPIKey;
 
+// length of messages array last time it was initialized
+var numMessagesSeen;
+// length of gamelog array last time it was initialized
+var numGameActionsSeen;
+
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
@@ -223,44 +228,8 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 
         Messages: `;
   const url = 'https://api.openai.com/v1/chat/completions';
-  var messageSummary = messages.join('\n');
-  const data = {
-    model: "gpt-3.5-turbo",
-    messages: [
-      {"role": "system", "content": whatsGoingOnPrompt}, 
-      {"role": "user", "content": messageSummary}
-    ],
-    temperature: 1
-  }
-
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiAPIKey}`,
-    },
-    body: JSON.stringify(data)
-  })
-    .then(response => response.json())
-    .then(data => {
-      console.log('OpenAI Response:', data);
-      const res = data.choices[0].message.content;
-      content.innerHTML = res;
-      content.appendChild(chatButton);
-      content.appendChild(gameButton)
-    })
-    .catch(error => console.error('Error making OpenAI request:', error));
-}
-
-async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
-  const url = 'https://api.openai.com/v1/chat/completions';
-  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
-        Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
-        Your summary should be three sentences maximum. 
-        The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
-
-        Messages: `;
-  var messageSummary = gamelog.join('\n');
+  // Summarize last five or so messages
+  var messageSummary = messages.slice(numMessagesSeen ? numMessagesSeen : 0).join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
@@ -285,6 +254,46 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
       content.innerHTML = res;
       content.appendChild(chatButton);
       content.appendChild(gameButton);
+      // update number of messages seen to track when chat was queried last
+      numMessagesSeen = messages.length;
+    })
+    .catch(error => console.error('Error making OpenAI request:', error));
+}
+
+async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
+        Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
+        Your summary should be three sentences maximum. 
+        The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
+
+        Messages: `;
+  var messageSummary = gamelog.slice(numGameActionsSeen ? numGameActionsSeen : 0).join('\n');
+  const data = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      {"role": "system", "content": whatsGoingOnPrompt}, 
+      {"role": "user", "content": messageSummary}
+    ],
+    temperature: 1
+  }
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openaiAPIKey}`,
+    },
+    body: JSON.stringify(data)
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log('OpenAI Response:', data);
+      const res = data.choices[0].message.content;
+      content.innerHTML = res;
+      content.appendChild(chatButton);
+      content.appendChild(gameButton);
+      numGameActionsSeen = gamelog.length;
     })
     .catch(error => console.error('Error making OpenAI request:', error));
 }
