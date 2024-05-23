@@ -6,6 +6,8 @@ var numMessagesSeen;
 // length of gamelog array last time it was initialized
 var numGameActionsSeen;
 
+var playerList;
+
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
@@ -93,6 +95,11 @@ function extractGameLog() {
         // If it's a game log message it'll first be the username and then their action
         if (i % 2 === 0) {
           prevMessage = node.textContent.trim();
+          if (!playerList) {
+            playerList = [prevMessage]
+          } else if (!playerList.includes(prevMessage)) {
+            playerList.push(prevMessage);
+          }
         } else {
           messages.push(prevMessage + ' ' + node.textContent.trim());
         }
@@ -216,7 +223,7 @@ function createDraggableBox() {
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
-        Your summary should be three sentences maximum. 
+        Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
         The username is the part before the colon, and each message is separated by a newline character. 
 
         EXAMPLES:
@@ -261,10 +268,11 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 }
 
 async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
+  console.log(playerList)
   const url = 'https://api.openai.com/v1/chat/completions';
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
-        Your summary should be three sentences maximum. 
+        Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
         The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
 
         Messages: `;
