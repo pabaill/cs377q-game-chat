@@ -261,13 +261,8 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
         EXAMPLES:
         Input: "USER123: I want wheat\n USER123: I want wood\n USER123: Please give me some rock"
         Output: "<ul> <li>USER123 wanted wheat, wood, and rock</li> </ul>"
-        Output: "<ul> <li>USER123 wanted wheat, wood, and rock</li> </ul>"
         
         Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
-        Output: "<ul>
-          <li>USER123 wanted wheat and offered a 1 for 1 trade to USER124 for wood</li>
-          <li>USER124 wanted wood</li>
-        </ul>"
         Output: "<ul>
           <li>USER123 wanted wheat and offered a 1 for 1 trade to USER124 for wood</li>
           <li>USER124 wanted wood</li>
@@ -318,6 +313,7 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
         Your summary should be in HTML format and three sentences maximum, followed by an additional sentence of game advice. Output your summary in unordered HTML list form, using <ul> and <li>.List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
+
         The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
 
         EXAMPLES:
