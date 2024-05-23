@@ -1,6 +1,15 @@
 // content.js
 var openaiAPIKey;
 
+//length of chatlog array last time it was initialized
+var numChatActionsSeen;
+
+// length of gamelog array last time it was initialized
+var numGameActionsSeen;
+
+// list of players
+var playerList;
+
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
@@ -65,6 +74,11 @@ function extractChatMessages() {
       textNodes.forEach(node => {
         if (node.textContent.includes(':')) {
           prevMessage = node.textContent.trim();
+          if (!playerList) {
+            playerList = [prevMessage]
+          } else if (!playerList.includes(prevMessage)) {
+            playerList.push(prevMessage);
+          }
         } else {
           messages.push(node.textContent.trim() + prevMessage);
         }
@@ -88,6 +102,11 @@ function extractGameLog() {
         // If it's a game log message it'll first be the username and then their action
         if (i % 2 === 0) {
           prevMessage = node.textContent.trim();
+          if (!playerList) {
+            playerList = [prevMessage]
+          } else if (!playerList.includes(prevMessage)) {
+            playerList.push(prevMessage);
+          }
         } else {
           messages.push(prevMessage + ' ' + node.textContent.trim());
         }
@@ -135,9 +154,6 @@ function createDraggableBox() {
   const content = document.createElement('div');
   content.classList.add('content');
   content.style.padding = '10px';
-  // content.innerHTML = extractGameLog().join('<br>');
-  // content.innerHTML = extractChatMessages().join('<br>');
-  // console.log(extractChatMessages())
 
   // Append title bar and content to container
   container.appendChild(titleBar);
@@ -217,10 +233,28 @@ function createDraggableBox() {
   document.body.appendChild(container);
 }
 
+// Function used to format response object and insert card images back in
+function replaceString(str, replacements) {
+  for (let key in replacements) {
+    if (replacements.hasOwnProperty(key)) {
+      let regex = new RegExp(key, 'g');
+      str = str.replace(regex, replacements[key]);
+    }
+  }
+  return str;
+}
+
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
+  const gameResources = {
+    "wool": `<img src="/dist/images/card_wool.svg?rev=9bd29423eae83fe9e6e4" alt="wool" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "lumber": `<img src="/dist/images/card_lumber.svg?rev=c3f06b26d0dc1df6e30b" alt="lumber" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "brick": `<img src="/dist/images/card_brick.svg?rev=4beb37891c6c77ebb485" alt="brick" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "grain": `<img src="/dist/images/card_grain.svg?rev=b72852bcde4c00a5f809" alt="grain" height="20" width="14.25" class="lobby-chat-text-icon">`
+  }
   content.innerHTML = "loading...";
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
+        Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
         Your summary should be three sentences maximum. Output your summary in unordered HTML list form, using <ul> and <li>.
         The username is the part before the colon, and each message is separated by a newline character. 
 
@@ -236,7 +270,7 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 
         Messages: `;
   const url = 'https://api.openai.com/v1/chat/completions';
-  var messageSummary = messages.join('\n');
+  var messageSummary = messages.slice(numChatActionsSeen ? numChatActionsSeen : 0).join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
@@ -257,8 +291,10 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
     .then(response => response.json())
     .then(data => {
       console.log('OpenAI Response:', data);
-      const res = data.choices[0].message.content;
+      let res = data.choices[0].message.content;
+      res = replaceString(res, gameResources);
       content.innerHTML = res;
+      numChatActionsSeen = messages.length;
       content.appendChild(chatButton);
       content.appendChild(gameButton)
     })
@@ -266,15 +302,31 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 }
 
 async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
+  const gameResources = {
+    "wool": `<img src="/dist/images/card_wool.svg?rev=9bd29423eae83fe9e6e4" alt="wool" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "lumber": `<img src="/dist/images/card_lumber.svg?rev=c3f06b26d0dc1df6e30b" alt="lumber" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "brick": `<img src="/dist/images/card_brick.svg?rev=4beb37891c6c77ebb485" alt="brick" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "grain": `<img src="/dist/images/card_grain.svg?rev=b72852bcde4c00a5f809" alt="grain" height="20" width="14.25" class="lobby-chat-text-icon">`
+  }
   content.innerHTML = "loading...";
   const url = 'https://api.openai.com/v1/chat/completions';
   const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
-        Your summary should be three sentences maximum. Output your summary in unordered HTML list form, using <ul> and <li>, where each bullet corresponds to a username.
+        Your summary should be in HTML format and three sentences maximum, followed by an additional sentence of game advice. Output your summary in unordered HTML list form, using <ul> and <li>.List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
+
         The game is Settlers of Catan. Details should properly advise a player in understanding the current state of the game and who is making winning moves.
 
+        EXAMPLES:
+        Input: "USER123 placed a settlement\n USER123 got lumber\n USER123 wants to give lumber for sheep"
+        Output: "<ul> <li><b>USER123</b> placed a settlement</li><li><b>USER123</b> is asking for a trade if you have lumber</li> </ul> <p>Consider trading lumber with <b>USER123</b>.</p>"
+        
+        Input: "USER123 moved Robber robber to prob_9 grain_tile"
+        Output: "<ul>
+          <li><b>USER123</b> is trying to steal grain from the tile with the 9 on it</li><p>You might need to find other sources of grain.</p>
+        </ul>"
+
         Messages: `;
-  var messageSummary = gamelog.join('\n');
+  var messageSummary = gamelog.slice(numGameActionsSeen ? numGameActionsSeen : 0).join('\n');
   const data = {
     model: "gpt-3.5-turbo",
     messages: [
@@ -295,7 +347,10 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
     .then(response => response.json())
     .then(data => {
       console.log('OpenAI Response:', data);
-      const res = data.choices[0].message.content;
+      let res = data.choices[0].message.content;
+      numGameActionsSeen = gamelog.length;
+      res = replaceString(res, gameResources);
+      console.log(res)
       content.innerHTML = res;
       content.appendChild(chatButton);
       content.appendChild(gameButton);
