@@ -10,6 +10,9 @@ var numGameActionsSeen;
 // list of players
 var playerList;
 
+// username of current player
+var username;
+
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
@@ -19,6 +22,27 @@ chrome.storage.local.get('env', function(result) {
     console.error('Environment variables not found.');
   }
 });
+
+// Function used to format response object and insert card images back in
+function replaceString(str, replacements) {
+  for (let key in replacements) {
+    if (replacements.hasOwnProperty(key)) {
+      let regex = new RegExp(key, 'g');
+      str = str.replace(regex, replacements[key]);
+    }
+  }
+  return str;
+}
+
+function getGameElements() {
+  return {
+    "wool": `<img src="/dist/images/card_wool.svg?rev=9bd29423eae83fe9e6e4" alt="wool" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "lumber": `<img src="/dist/images/card_lumber.svg?rev=c3f06b26d0dc1df6e30b" alt="lumber" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "brick": `<img src="/dist/images/card_brick.svg?rev=4beb37891c6c77ebb485" alt="brick" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "grain": `<img src="/dist/images/card_grain.svg?rev=b72852bcde4c00a5f809" alt="grain" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "ore": `<img src="/dist/images/card_ore.svg?rev=456f643916038b42d704" alt="ore" height="20" width="14.25" class="lobby-chat-text-icon">`,
+  };
+}
 
 /* Helper function to replace image elements with their alt text */
 function replaceImgWithAltText(div) {
@@ -104,7 +128,7 @@ function extractGameLog() {
           prevMessage = node.textContent.trim();
           if (!playerList) {
             playerList = [prevMessage]
-          } else if (!playerList.includes(prevMessage)) {
+          } else if (!playerList.includes(prevMessage) && !prevMessage.includes(' ')) {
             playerList.push(prevMessage);
           }
         } else {
@@ -113,7 +137,6 @@ function extractGameLog() {
         i += 1;
       });
   });
-  console.log(messages)
   return messages;
 }
 
@@ -154,6 +177,9 @@ function createDraggableBox() {
   const content = document.createElement('div');
   content.classList.add('content');
   content.style.padding = '10px';
+  content.style.display = 'flex';
+  content.style.flexDirection = 'column';
+  content.style.justifyContent = 'space-between';
 
   // Append title bar and content to container
   container.appendChild(titleBar);
@@ -224,35 +250,45 @@ function createDraggableBox() {
     chatButton.style.color = 'black';
     gptUpdateGameWindow(extractGameLog(), content, chatButton, gameButton);
   });
-  // Append the load more button to the modal content
   content.style.paddingTop = '35px';
-  content.appendChild(chatButton);
-  content.appendChild(gameButton);
+
+  // Set initial state to get username of player
+  extractGameLog();
+  const playerSelect = document.createElement('select');
+  playerSelect.id = 'player-select';
+  const playerSelectLabel = document.createElement('label');
+  playerSelectLabel.textContent = 'Select your username';
+  playerSelectLabel.htmlFor = 'player-select';
+  playerList.forEach(function(option) {
+    var opt = document.createElement('option');
+    opt.value = option;
+    opt.text = option;
+    playerSelect.add(opt);
+  });
+
+  const playerSelectSubmit = document.createElement('button');
+  playerSelectSubmit.textContent = 'Submit';
+  playerSelectSubmit.addEventListener('click', (e) => {
+    username = playerSelect.value;
+    container.appendChild(chatButton);
+    container.appendChild(gameButton);
+    playerSelect.remove();
+    playerSelectLabel.remove();
+    playerSelectSubmit.remove();
+  });
+
+  content.appendChild(playerSelectLabel);
+  content.appendChild(playerSelect);
+  content.appendChild(playerSelectSubmit);
 
   // Append container to body
   document.body.appendChild(container);
 }
 
-// Function used to format response object and insert card images back in
-function replaceString(str, replacements) {
-  for (let key in replacements) {
-    if (replacements.hasOwnProperty(key)) {
-      let regex = new RegExp(key, 'g');
-      str = str.replace(regex, replacements[key]);
-    }
-  }
-  return str;
-}
-
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
-  const gameResources = {
-    "wool": `<img src="/dist/images/card_wool.svg?rev=9bd29423eae83fe9e6e4" alt="wool" height="20" width="14.25" class="lobby-chat-text-icon">`,
-    "lumber": `<img src="/dist/images/card_lumber.svg?rev=c3f06b26d0dc1df6e30b" alt="lumber" height="20" width="14.25" class="lobby-chat-text-icon">`,
-    "brick": `<img src="/dist/images/card_brick.svg?rev=4beb37891c6c77ebb485" alt="brick" height="20" width="14.25" class="lobby-chat-text-icon">`,
-    "grain": `<img src="/dist/images/card_grain.svg?rev=b72852bcde4c00a5f809" alt="grain" height="20" width="14.25" class="lobby-chat-text-icon">`
-  }
+  const gameResources = getGameElements();
   content.innerHTML = "loading...";
-  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given chat messages. 
+  const whatsGoingOnPrompt = `You are an assistant that helps the player ${username} catch up on the given chat messages. Give advice from the perspective of ${username}.
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
         Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
         Your summary should be three sentences maximum. Output your summary in unordered HTML list form, using <ul> and <li>.
@@ -302,15 +338,10 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
 }
 
 async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
-  const gameResources = {
-    "wool": `<img src="/dist/images/card_wool.svg?rev=9bd29423eae83fe9e6e4" alt="wool" height="20" width="14.25" class="lobby-chat-text-icon">`,
-    "lumber": `<img src="/dist/images/card_lumber.svg?rev=c3f06b26d0dc1df6e30b" alt="lumber" height="20" width="14.25" class="lobby-chat-text-icon">`,
-    "brick": `<img src="/dist/images/card_brick.svg?rev=4beb37891c6c77ebb485" alt="brick" height="20" width="14.25" class="lobby-chat-text-icon">`,
-    "grain": `<img src="/dist/images/card_grain.svg?rev=b72852bcde4c00a5f809" alt="grain" height="20" width="14.25" class="lobby-chat-text-icon">`
-  }
+  const gameResources = getGameElements();
   content.innerHTML = "loading...";
   const url = 'https://api.openai.com/v1/chat/completions';
-  const whatsGoingOnPrompt = `You are an assistant that helps a user catch up on the given game log. 
+  const whatsGoingOnPrompt = `You are an assistant that helps the player ${username} catch up on the given game log. Give advice from the perspective of ${username}.
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate.
         Your summary should be in HTML format and three sentences maximum, followed by an additional sentence of game advice. Output your summary in unordered HTML list form, using <ul> and <li>.List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
 
@@ -350,7 +381,6 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
       let res = data.choices[0].message.content;
       numGameActionsSeen = gamelog.length;
       res = replaceString(res, gameResources);
-      console.log(res)
       content.innerHTML = res;
       content.appendChild(chatButton);
       content.appendChild(gameButton);
