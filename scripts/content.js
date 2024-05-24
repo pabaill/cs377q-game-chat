@@ -27,7 +27,7 @@ chrome.storage.local.get('env', function(result) {
 function replaceString(str, replacements) {
   for (let key in replacements) {
     if (replacements.hasOwnProperty(key)) {
-      let regex = new RegExp(key, 'g');
+      let regex = new RegExp('\\b' + key + '\\b', 'g');
       str = str.replace(regex, replacements[key]);
     }
   }
@@ -41,6 +41,12 @@ function getGameElements() {
     "brick": `<img src="/dist/images/card_brick.svg?rev=4beb37891c6c77ebb485" alt="brick" height="20" width="14.25" class="lobby-chat-text-icon">`,
     "grain": `<img src="/dist/images/card_grain.svg?rev=b72852bcde4c00a5f809" alt="grain" height="20" width="14.25" class="lobby-chat-text-icon">`,
     "ore": `<img src="/dist/images/card_ore.svg?rev=456f643916038b42d704" alt="ore" height="20" width="14.25" class="lobby-chat-text-icon">`,
+    "dice_1": `<img src="/dist/images/dice_1.svg?rev=aa5fc851aa5ca7d25c4f" alt="dice_1" height="20" width="20" class="lobby-chat-text-icon">`,
+    "dice_2": `<img src="/dist/images/dice_2.svg?rev=d117b27bc90eacc58018" alt="dice_2" height="20" width="20" class="lobby-chat-text-icon">`,
+    "dice_3": `<img src="/dist/images/dice_3.svg?rev=04e6166b5809e9abef2b" alt="dice_3" height="20" width="20" class="lobby-chat-text-icon">`,
+    "dice_4": `<img src="/dist/images/dice_4.svg?rev=24ffb2ae79c7905baed0" alt="dice_4" height="20" width="20" class="lobby-chat-text-icon">`,
+    "dice_5": `<img src="/dist/images/dice_5.svg?rev=aaf9862737811c858ab8" alt="dice_5" height="20" width="20" class="lobby-chat-text-icon">`,
+    "dice_6": `<img src="/dist/images/dice_6.svg?rev=3f90e79b3392499898e3" alt="dice_6" height="20" width="20" class="lobby-chat-text-icon">`
   };
 }
 
