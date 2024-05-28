@@ -297,7 +297,6 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
   const whatsGoingOnPrompt = `You are an assistant that helps the player ${username} catch up on the given chat messages. Give advice from the perspective of ${username}.
         Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. 
         Your summary should be in HTML format and three sentences maximum. List each sentence on a new line. The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
-        Your summary should be three sentences maximum. Output your summary in unordered HTML list form, using <ul> and <li>.
         The username is the part before the colon, and each message is separated by a newline character. 
 
         EXAMPLES:
