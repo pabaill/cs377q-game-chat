@@ -331,8 +331,6 @@ function createDraggableBox() {
   document.body.appendChild(container);
 }
 
-<<<<<<< Updated upstream
-=======
 function getArrayDisplayInnerHTML(arr) {
   const reversedArray = arr.slice().reverse();
   let innerHTMLContent = '';
@@ -348,7 +346,6 @@ function getArrayDisplayInnerHTML(arr) {
   return innerHTMLContent;
 }
 
->>>>>>> Stashed changes
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
   const gameResources = getGameElements();
   content.innerHTML = "loading...";
@@ -456,12 +453,8 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
       let res = data.choices[0].message.content;
       numGameActionsSeen = gamelog.length;
       res = replaceString(res, gameResources);
-<<<<<<< Updated upstream
-      content.innerHTML = res;
-=======
       previousGameSummaries.push(res);
       content.innerHTML = getArrayDisplayInnerHTML(previousGameSummaries);
->>>>>>> Stashed changes
       content.appendChild(chatButton);
       content.appendChild(gameButton);
     })
