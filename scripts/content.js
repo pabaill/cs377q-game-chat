@@ -13,15 +13,12 @@ var playerList;
 // username of current player
 var username;
 
-<<<<<<< Updated upstream
-=======
 // array with previous chatlog summaries
 var previousChatSummaries = [];
 
 // array with previous chatlog summaries
 var previousGameSummaries = [];
 
->>>>>>> Stashed changes
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
