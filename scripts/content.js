@@ -420,21 +420,7 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
   const whatsGoingOnPrompt = `You are an assistant that helps the player ${username} catch up on the given chat messages.
   Give advice from the perspective of ${username}. Include all important details, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. Your summary should be in HTML format and three sentences maximum. Each sentence should be listed on a new line.
   The list of players is: ${playerList.toString()}. Wrap the names of players in <b> tags.
-  The username is the part before the colon, and each message is separated by a newline character.
-  
-  EXAMPLES:
-  Input: "USER123: I want wheat\n USER123: I want wood\n USER123: Please give me some rock"
-  Output: "<ul>
-  
-  <li><b>USER123</b> wanted wheat, wood, and rock.</li> 
-  </ul>" 
-  Input: "USER123: I want wheat\n USER124: I want wood\n USER123: I'll trade 1 wheat for 1 wood"
-  Output: "<ul>
-  
-  <li><b>USER123</b> wanted wheat and offered a 1 for 1 trade to <b>USER124</b> for wood.</li> 
-  <li><b>USER124</b> wanted wood.</li> 
-  </ul>"
-  Messages:`;
+  The username is the part before the colon, and each message is separated by a newline character.`;
   const url = 'https://api.openai.com/v1/chat/completions';
   var messageSummary = messages.slice(numChatActionsSeen ? numChatActionsSeen : 0).join('\n');
   const data = {
@@ -459,10 +445,8 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
       console.log('OpenAI Response:', data);
       let res = data.choices[0].message.content;
       res = replaceString(res, gameResources);
-      previousChatSummaries.push(res);
       content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
       previousChatSummaries.push(res);
-      content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
       numChatActionsSeen = messages.length;
       content.appendChild(chatButton);
       content.appendChild(gameButton)
@@ -520,7 +504,7 @@ async function askQuestionToGPT(transcript, content, chatButton, gameButton) {
   const url = 'https://api.openai.com/v1/chat/completions';
   const answerAudioQuestionPrompt = `You are an assistant that helps the player ${username} play the game Catan. Answer their question and give advice from the perspective of ${username}. Include all important details in your answer, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. Your answer should be one sentence maximum. 
   
-  The list of players is: ${playerList.toString()}. Wrap the names of players in <b> tags.
+  The list of players is: ${playerList.toString()}. Wrap the names of players in <b></b> tags.
 
   The game is Settlers of Catan. Here are some key details about the game to assist you in providing accurate advice:
   Resources: There are five types of resources: brick, lumber, wool, grain, and ore.
@@ -559,7 +543,7 @@ async function askQuestionToGPT(transcript, content, chatButton, gameButton) {
       console.log('OpenAI Response:', data);
       let res = data.choices[0].message.content;
       res = replaceString(res, getGameElements());
-      content.innerHTML = `You asked: ${transcript}?\n${res}`;
+      content.innerHTML = `<p>You asked: ${transcript}?</p><p>${res}</p>`;
       content.appendChild(chatButton);
       content.appendChild(gameButton);
     })
