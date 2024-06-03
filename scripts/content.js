@@ -177,7 +177,7 @@ function createDraggableBox() {
   titleBar.style.borderRadius = '5px 5px 0 0';
   titleBar.style.display = 'flex';
   titleBar.style.justifyContent = 'space-between';
-  titleBar.innerHTML = '<span>Quick Chat</span><span class="close-btn" id="closeBtn">&times;</span>';
+  titleBar.innerHTML = '<span>Quick Chat</span>';
 
   // Create content div
   const content = document.createElement('div');
@@ -212,12 +212,43 @@ function createDraggableBox() {
       isDragging = false;
   });
 
+  // Collapse button functionality
+  const collapseBtn = document.createElement('button');
+  collapseBtn.textContent = 'Collapse';
+  collapseBtn.classList.add('collapse-btn');
+  collapseBtn.style.marginLeft = '10px';
+  collapseBtn.style.cursor = 'pointer';
+
+  collapseBtn.addEventListener('click', () => {
+      if (content.style.display === 'none') {
+          content.style.display = 'flex';
+          collapseBtn.textContent = 'Collapse';
+          container.style.resize = 'both';
+          container.style.height = '200px';
+      } else {
+          content.style.display = 'none';
+          collapseBtn.textContent = 'Expand';
+          container.style.height = titleBar.style.height;
+          container.style.resize = 'none';
+      }
+  });
+
   // Close button functionality
-  const closeBtn = titleBar.querySelector('.close-btn');
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'close-btn';
+  closeBtn.id = 'closeBtn';
+  closeBtn.innerHTML = '&times;';
   closeBtn.addEventListener('click', () => {
       container.remove();
   });
   closeBtn.style.cursor = 'pointer';
+
+  const controlsDiv = document.createElement('div');
+  controlsDiv.style.display = 'flex';
+  controlsDiv.style.flexDirection = 'row';
+  controlsDiv.appendChild(collapseBtn);
+  controlsDiv.appendChild(closeBtn);
+  titleBar.appendChild(controlsDiv);
 
   // OUR MAIN FEATURE: a button that reads the chat then can process it
   const chatButton = document.createElement('button');
