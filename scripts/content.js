@@ -461,6 +461,8 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
       res = replaceString(res, gameResources);
       previousChatSummaries.push(res);
       content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
+      previousChatSummaries.push(res);
+      content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
       numChatActionsSeen = messages.length;
       content.appendChild(chatButton);
       content.appendChild(gameButton)
