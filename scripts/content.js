@@ -575,7 +575,7 @@ async function askQuestionToGPT(transcript, content, chatButton, gameButton) {
       console.log('OpenAI Response:', data);
       let res = data.choices[0].message.content;
       res = replaceString(res, getGameElements());
-      content.innerHTML = `You asked: ${transcript}\n${res}`;
+      content.innerHTML = `You asked: ${transcript}?\n${res}`;
       content.appendChild(chatButton);
       content.appendChild(gameButton);
     })
