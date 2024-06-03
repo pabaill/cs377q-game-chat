@@ -13,6 +13,12 @@ var playerList;
 // username of current player
 var username;
 
+// array with previous chatlog summaries
+var previousChatSummaries = [];
+
+// array with previous chatlog summaries
+var previousGameSummaries = [];
+
 chrome.storage.local.get('env', function(result) {
   const env = result.env;
   if (env && env.OPENAI_API_KEY) {
@@ -291,6 +297,21 @@ function createDraggableBox() {
   document.body.appendChild(container);
 }
 
+function getArrayDisplayInnerHTML(arr) {
+  const reversedArray = arr.slice().reverse();
+  let innerHTMLContent = '';
+  for (let i = 0; i < reversedArray.length; i++) {
+    let element = reversedArray[i];
+    // Use a regular expression to find and add title attribute to each img tag so the alt text appears on hover
+    element = element.replace(/<img([^>]*?)alt="([^"]*?)"([^>]*?)>/g, '<img$1alt="$2"$3 title="$2">');
+    innerHTMLContent += element;
+    if (i < reversedArray.length - 1) {
+        innerHTMLContent += '<hr style="border: 1px solid black; width: 100%;">';
+    }
+  }
+  return innerHTMLContent;
+}
+
 async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
   const gameResources = getGameElements();
   content.innerHTML = "loading...";
@@ -335,7 +356,8 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
       console.log('OpenAI Response:', data);
       let res = data.choices[0].message.content;
       res = replaceString(res, gameResources);
-      content.innerHTML = res;
+      previousChatSummaries.push(res);
+      content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
       numChatActionsSeen = messages.length;
       content.appendChild(chatButton);
       content.appendChild(gameButton)
@@ -387,7 +409,8 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
       let res = data.choices[0].message.content;
       numGameActionsSeen = gamelog.length;
       res = replaceString(res, gameResources);
-      content.innerHTML = res;
+      previousGameSummaries.push(res);
+      content.innerHTML = getArrayDisplayInnerHTML(previousGameSummaries);
       content.appendChild(chatButton);
       content.appendChild(gameButton);
     })
