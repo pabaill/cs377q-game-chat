@@ -218,6 +218,68 @@ function createDraggableBox() {
       isDragging = false;
   });
 
+  // Audio button: ask questions about the chat history
+  const recordButton = document.createElement('button');
+  recordButton.id = 'recordButton';
+  recordButton.textContent = '🎤 Ask a Question';
+  // Hide until you select your username
+  recordButton.style.display = 'none';
+  let mediaRecorder;
+  let audioChunks = [];
+  let isRecording = false;
+
+  recordButton.addEventListener('click', async () => {
+    if (!isRecording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[event.resultIndex][0].transcript;
+          askQuestionToGPT(transcript, content, chatButton, gameButton);
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+        };
+
+        mediaRecorder.onstart = () => {
+          recognition.start();
+        };
+
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          recognition.stop();
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          audioChunks = [];
+          const audioUrl = URL.createObjectURL(audioBlob);
+          // const audio = new Audio(audioUrl);
+          // audio.play();
+        };
+
+        mediaRecorder.start();
+        recordButton.textContent = '⏹️ Stop';
+        isRecording = true;
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+      }
+    } else {
+      mediaRecorder.stop();
+      recordButton.textContent = '🎤 Ask a Question';
+      isRecording = false;
+    }
+  });
+
+  titleBar.appendChild(recordButton);
+  
   // Collapse button functionality
   const collapseBtn = document.createElement('button');
   collapseBtn.textContent = 'Collapse';
@@ -231,11 +293,19 @@ function createDraggableBox() {
           collapseBtn.textContent = 'Collapse';
           container.style.resize = 'both';
           container.style.height = '200px';
+
+          titleBar.style.overflow = 'auto';
+          gameButton.style.display = 'block';
+          chatButton.style.display = 'block';
       } else {
           content.style.display = 'none';
           collapseBtn.textContent = 'Expand';
           container.style.height = titleBar.style.height;
           container.style.resize = 'none';
+
+          titleBar.style.overflow = 'hidden';
+          gameButton.style.display = 'none';
+          chatButton.style.display = 'none';
       }
   });
 
@@ -262,7 +332,7 @@ function createDraggableBox() {
   chatButton.classList.add('chat-btn');
   chatButton.style.position = 'absolute';
   chatButton.style.height = '30px';
-  chatButton.style.top = '35px';
+  chatButton.style.top = '40px';
   chatButton.style.left = 0;
   chatButton.style.width = '50%';
 
@@ -271,7 +341,7 @@ function createDraggableBox() {
   gameButton.classList.add('game-btn');
   gameButton.style.position = 'absolute';
   gameButton.style.height = '30px';
-  gameButton.style.top = '35px';
+  gameButton.style.top = '40px';
   gameButton.style.left = '50%';
   gameButton.style.width = '50%';
 
@@ -318,6 +388,7 @@ function createDraggableBox() {
     playerSelect.remove();
     playerSelectLabel.remove();
     playerSelectSubmit.remove();
+    recordButton.style.display = 'block';
   });
 
   content.appendChild(playerSelectLabel);
@@ -457,6 +528,58 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
     })
     .catch(error => console.error('Error making OpenAI request:', error));
 }
+
+async function askQuestionToGPT(transcript, content, chatButton, gameButton) {
+  content.innerHTML = "loading...";
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const answerAudioQuestionPrompt = `You are an assistant that helps the player ${username} play the game Catan. Answer their question and give advice from the perspective of ${username}. Include all important details in your answer, but summarize the messages as concisely as possible, grouping major things that happened by username when appropriate. Your answer should be one sentence maximum. 
+  
+  The list of players is: ${playerList.toString()}. Wrap the names of players in <b> tags.
+
+  The game is Settlers of Catan. Here are some key details about the game to assist you in providing accurate advice:
+  Resources: There are five types of resources: brick, lumber, wool, grain, and ore.
+  Robber: The Robber can be moved to block resources on a hex and to steal a resource card from another player.
+  Settlements and Cities: Settlements are worth 1 victory point, and cities are worth 2. Cities also produce more resources.
+  Development Cards: Players can buy development cards which can grant various benefits, including knights (which move the Robber), victory points, road building, monopoly, and year of plenty.
+  Trade: Players can trade resources with each other or with the bank at a 4:1 ratio, or at a 3:1 or 2:1 ratio if they have the appropriate harbor.
+  Details should properly advise a player in understanding the current state of the game and who is making winning moves.
+
+  Here is the list of all of the moves made in the game: ${extractGameLog()}
+
+  Here is the list of all of the chat messages said in the game: ${extractChatMessages()}
+
+  Repeat their question, then answer it.
+  
+  `;
+  const data = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      {"role": "system", "content": answerAudioQuestionPrompt}, 
+      {"role": "user", "content": transcript}
+    ],
+    temperature: 1
+  }
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openaiAPIKey}`,
+    },
+    body: JSON.stringify(data)
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log('OpenAI Response:', data);
+      let res = data.choices[0].message.content;
+      res = replaceString(res, getGameElements());
+      content.innerHTML = `You asked: ${transcript}\n${res}`;
+      content.appendChild(chatButton);
+      content.appendChild(gameButton);
+    })
+    .catch(error => console.error('Error making OpenAI request:', error));
+}
+
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Message received in content script:', request);
