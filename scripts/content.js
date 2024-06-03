@@ -482,23 +482,7 @@ async function gptUpdateGameWindow(gamelog, content, chatButton, gameButton) {
   Settlements and Cities: Settlements are worth 1 victory point, and cities are worth 2. Cities also produce more resources.
   Development Cards: Players can buy development cards which can grant various benefits, including knights (which move the Robber), victory points, road building, monopoly, and year of plenty.
   Trade: Players can trade resources with each other or with the bank at a 4:1 ratio, or at a 3:1 or 2:1 ratio if they have the appropriate harbor.
-  Details should properly advise a player in understanding the current state of the game and who is making winning moves.  
-  EXAMPLES:
-  Input: "USER123 placed a settlement\n USER123 got lumber\n USER123 wants to give lumber for sheep"
-  Output:
-  <ul> 
-    <li><b>USER123</b> placed a settlement.</li> 
-    <li><b>USER123</b> got lumber.</li> 
-    <li><b>USER123</b> wants to trade lumber for sheep.</li> 
-  </ul> 
-  <p>Consider trading sheep with <b>USER123</b>.</p>
-  Input: "USER123 moved Robber to grain tile with 9"
-  Output:
-  <ul> 
-    <li><b>USER123</b> moved the Robber to the grain tile with 9.</li> 
-  </ul> 
-  <p>You might need to find other sources of grain.</p>
-  Messages:`;
+  Details should properly advise a player in understanding the current state of the game and who is making winning moves.`;
   var messageSummary = gamelog.slice(numGameActionsSeen ? numGameActionsSeen : 0).join('\n');
   const data = {
     model: "gpt-3.5-turbo",
