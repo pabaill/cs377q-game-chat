@@ -445,8 +445,8 @@ async function gptUpdateChatWindow(messages, content, chatButton, gameButton) {
       console.log('OpenAI Response:', data);
       let res = data.choices[0].message.content;
       res = replaceString(res, gameResources);
-      content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
       previousChatSummaries.push(res);
+      content.innerHTML = getArrayDisplayInnerHTML(previousChatSummaries);
       numChatActionsSeen = messages.length;
       content.appendChild(chatButton);
       content.appendChild(gameButton)
